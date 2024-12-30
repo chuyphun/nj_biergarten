@@ -4,10 +4,12 @@ A Web scraping practice
 
 ## Tools
 - HTML/XML parsers
+
     - [beautifulsoup]()
     - [lxml](https://lxml.de/)
     - [parsel](https://github.com/scrapy/parsel)
     - [selectolax](https://github.com/rushter/selectolax)
+
   Which one to choose?
     - <https://lxml.de/intro.html>
     - <https://github.com/rushter/selectolax?tab=readme-ov-file#simple-benchmark>

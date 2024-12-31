@@ -46,6 +46,9 @@ A Web scraping practice
     - [ ] No new image => logout
 - crontab?
 - `snakeviz` to catch culprit who is slowing down scraping
+- `logging` or `print`?
+- Progress bar for better grasp of remaining (waiting) time
+- Cache the `image_rel_urls`
 
 
 ## Q&A

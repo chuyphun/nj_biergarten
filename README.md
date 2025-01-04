@@ -66,3 +66,4 @@ A Web scraping practice
   works?
 - Find out the logic behind photo naming. E.g. `images/aa503/1754/dva2rckme26sy4w.jpg`
 - No significant boost of speed btw my `lxml` and `bs4` code, why?
+- `config` as global => more efficient?

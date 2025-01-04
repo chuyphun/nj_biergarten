@@ -1,4 +1,5 @@
 import logging
+import io
 import threading
 import queue
 import asyncio
@@ -15,7 +16,8 @@ from math import prod
 from datetime import datetime
 from itertools import permutations
 from dotenv import dotenv_values
-#from transformers import TrOCRProcessor, VisionEncoderDecoderModel
+from PIL import Image
+from transformers import TrOCRProcessor, VisionEncoderDecoderModel
 from selectolax.parser import HTMLParser
 from tqdm.auto import tqdm
 
@@ -27,11 +29,22 @@ logging.basicConfig()
 
 
 class TrOCREngine:
-    def __init__(self):
-        pass
+    def __init__(
+        self,
+        *args,
+        processor_dir: str = "microsoft/trocr-base-handwritten",
+        model_dir: str = "microsoft/trocr-base-stage1",
+    ) -> None:
+        self.processor = TrOCRProcessor.from_pretrained(processor_dir)
+        self.model = VisionEncoderDecoderModel.from_pretrained(model_dir)
 
-    def solve_captcha(self):
-        pass
+
+    def crack_captcha(self, image: Image) -> str:
+        pixel_values = self.processor(image, return_tensors='pt').pixel_values
+        generated_ids = self.model.generate(pixel_values)
+        generated_text = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+        return generated_text
+
 
 
 def data_size(num_images: int) -> int:
@@ -131,27 +144,26 @@ def nodriver_login():
     pass
 
 
-@unique
-class Cracker(Enum):
-    TRICK = auto()
-    TROCR = auto()
-
-
 def crack_captcha(
-    response: httpx.Response,
+    client: httpx.Client,
     *args,
-    cracker: Cracker = Cracker.TRICK,
+    ocr_engine: TrOCREngine | None = None,
 ) -> str:
-    if not isinstance(cracker, Cracker):
-        raise TypeError(f"Expect Cracker but got {type(cracker) = }")
+    if not isinstance(ocr_engine, (TrOCREngine, None)):
+        raise TypeError(f"Wrong arg type: {type(ocr_engine) = }")
 
-
+    config = dotenv_values(".env")
+    response = client.get(config["LOGIN_URL"])
     tree = HTMLParser(response.content)
     img_node = tree.css_first('img[alt="驗證碼圖片"]')
-    if cracker is Cracker.TRICK:
+    if ocr_engine is None:
         guess = img_node.attributes["src"].split("=")[-1]
-    if cracker is Cracker.TROCR:
-        pass
+    else:
+        image_url = slash_join(config["WEBSITE"], img_node.attributes["src"])
+        image_bytes = client.get(image_url).content
+        image = Image.open(io.BytesIO(image_bytes))
+        guess = ocr_engine.crack_captcha(image)
+        ipdb.set_trace()
 
     return guess
 
@@ -163,26 +175,24 @@ def is_reasonable(captcha: str) -> bool:
 def httpx_selectolax_login(
     client: httpx.Client,
     *args,
-    cracker: Cracker = Cracker.TRICK,
     max_attempts: int = 3,
+    ocr_engine: None | TrOCREngine = None,
 )-> None:
     config = dotenv_values(".env")
-    login_url = config["LOGIN_URL"]
-    post_url = config["POST_URL"]
-
     data = {
         "acc": config["USERNAME"],
         "pwd": config["PASSWORD"],
     }
-    ipdb.set_trace()
 
     for _ in range(max_attempts):
-        response = client.get(login_url)
-        guess = crack_captcha(response, cracker=cracker)
+        guess = crack_captcha(
+            client,
+            ocr_engine=ocr_engine,
+        )
         if not is_reasonable(guess):
             continue
         data["chk"] = guess
-        post_response = client.post(post_url, data=data)
+        post_response = client.post(config["POST_URL"], data=data)
         if login_succeeded(post_response):
             return
 
@@ -304,9 +314,12 @@ def main():
 def main2():
     logger.setLevel(level=logging.INFO)
 
-    print("Stage 1: Collect image urls")
+    print("Stage 1: Log in and collect image urls")
     with httpx.Client() as client:
-        httpx_selectolax_login(client)
+        ocr_engine = TrOCREngine(
+            model_dir=Path.home() / "git-repos/gitlab/phunc20/captchew/checkpoint-1100-fp16-numBeams4-penalty1-ngram0/"
+        )
+        httpx_selectolax_login(client, ocr_engine=ocr_engine)
         q = queue.Queue()
         queue_image_urls(q, client=client)
 

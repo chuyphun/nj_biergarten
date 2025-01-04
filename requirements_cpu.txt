@@ -10,3 +10,6 @@ tqdm==4.67.1
 selectolax==0.3.27
 python-dotenv==1.0.1
 httpx==0.28.1
+transformers==4.46.3
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1

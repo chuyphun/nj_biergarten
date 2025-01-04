@@ -41,6 +41,8 @@ A Web scraping practice
     - [ ] Cache image URLs
     - [ ] Database
     - [ ] Async and sync
+        - <https://docs.python.org/3/library/asyncio-queue.html#examples>
+        - <https://www.python-httpx.org/async/>
     - [ ] Ensure no duplicate download
     - [ ] Ensure all photos (on diff pages) are downloaded
     - [ ] No new image => logout
@@ -49,6 +51,13 @@ A Web scraping practice
 - `logging` or `print`?
 - Progress bar for better grasp of remaining (waiting) time
 - Cache the `image_rel_urls`
+- Finish filling the queue first and then close the `httpx.Client` session immediately
+  afterwards. Crawl image according to the cached queue of urls later.
+    - Pros
+        1. Shorter session so less probable to be detected as bot.
+    - Cons
+        1. This is not what a queue is for. A Queue should allow get and put to
+           happen currently.
 
 
 ## Q&A

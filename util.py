@@ -115,6 +115,17 @@ def collect_practical_train_data(
                 f.write(response.content)
 
 
+
+def collect_practical_train_data2(
+    num_images: int = 1_000_000,
+    *args,
+    symbols: str =  string.ascii_lowercase + string.digits[1:],
+    save_dir: str | Path = Path.cwd() / "downloads",
+) -> None:
+    # TODO: threading queue
+    pass
+
+
 def crazy_infinite_practical_captcha_download(
     num_images: int = 1_000_000,
     *args,
@@ -128,7 +139,9 @@ def crazy_infinite_practical_captcha_download(
             symbols=symbols,
             save_dir=save_dir,
         )
-    except:
+    #except (httpx.ConnectError, httpx.ConnectTimeout, httpx.ReadTimeout):
+    except Exception:
+        time.sleep(3)
         collect_practical_train_data(
             num_images,
             symbols=symbols,

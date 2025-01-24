@@ -1,5 +1,6 @@
 import logging
 import io
+import os
 import threading
 import queue
 import asyncio
@@ -30,10 +31,10 @@ logging.basicConfig()
 
 class TrOCREngine:
     def __init__(
-        self,
-        *args,
-        processor_dir: str = "microsoft/trocr-base-handwritten",
-        model_dir: str = "microsoft/trocr-base-stage1",
+            self,
+            *args,
+            processor_dir: str = "microsoft/trocr-base-handwritten",
+            model_dir: str = "microsoft/trocr-base-stage1",
     ) -> None:
         self.processor = TrOCRProcessor.from_pretrained(processor_dir)
         self.model = VisionEncoderDecoderModel.from_pretrained(model_dir)
@@ -53,10 +54,13 @@ def data_size(num_images: int) -> int:
     return data_size_in_GB
 
 
+default_symbols = string.ascii_lowercase + string.digits[1:]
+
+
 def train_data_size(
-    *args,
-    num_symbols: int = 35,
-    length: int = 6,
+        *args,
+        num_symbols: int = len(default_symbols),
+        length: int = 6,
 ):
     """
     35 comes from len(string.ascii_lowercase + string.digits[1:])
@@ -68,12 +72,12 @@ def train_data_size(
 
 
 def collect_almost_all_train_data(
-    *args,
-    # 0 and o's diff are hardly noticeable
-    symbols: str =  string.ascii_lowercase + string.digits[1:],
-    captcha_length: int = 6,
-    # TODO: make the downloads dir absolute
-    save_dir: str | Path = Path.cwd() / "downloads",
+        *args,
+        # 0 and o's diff are hardly noticeable
+        symbols: str = default_symbols,
+        captcha_length: int = 6,
+        # TODO: make the downloads dir absolute
+        save_dir: str | Path = Path.cwd() / "downloads",
 ) -> None:
     config = dotenv_values(".env")
     captcha_servers = [config["PARENT_CAPTCHA_SERVER"],
@@ -92,11 +96,11 @@ def collect_almost_all_train_data(
 
 
 def collect_practical_train_data(
-    num_images: int = 1_000_000,
-    *args,
-    # 0 and o's diff are hardly noticeable
-    symbols: str =  string.ascii_lowercase + string.digits[1:],
-    save_dir: str | Path = Path.cwd() / "downloads",
+        num_images: int = 1_000_000,
+        *args,
+        # 0 and o's diff are hardly noticeable
+        symbols: str = default_symbols,
+        save_dir: str | Path = Path.cwd() / "downloads",
 ) -> None:
     # 1 million images ~ 4 GB
     config = dotenv_values(".env")
@@ -117,21 +121,21 @@ def collect_practical_train_data(
 
 
 def collect_practical_train_data2(
-    num_images: int = 1_000_000,
-    *args,
-    symbols: str =  string.ascii_lowercase + string.digits[1:],
-    save_dir: str | Path = Path.cwd() / "downloads",
+        num_images: int = 1_000_000,
+        *args,
+        symbols: str = default_symbols,
+        save_dir: str | Path = Path.cwd() / "downloads",
 ) -> None:
     # TODO: threading queue
     pass
 
 
 def crazy_infinite_practical_captcha_download(
-    num_images: int = 1_000_000,
-    *args,
-    # 0 and o's diff are hardly noticeable
-    symbols: str =  string.ascii_lowercase + string.digits[1:],
-    save_dir: str | Path = Path.cwd() / "downloads",
+        num_images: int = 1_000_000,
+        *args,
+        # 0 and o's diff are hardly noticeable
+        symbols: str = default_symbols,
+        save_dir: str | Path = Path.cwd() / "downloads",
 ) -> None:
     try:
         collect_practical_train_data(
@@ -158,9 +162,9 @@ def nodriver_login():
 
 
 def crack_captcha(
-    client: httpx.Client,
-    *args,
-    ocr_engine: TrOCREngine | None = None,
+        client: httpx.Client,
+        *args,
+        ocr_engine: TrOCREngine | None = None,
 ) -> str:
     if not isinstance(ocr_engine, (TrOCREngine, None)):
         raise TypeError(f"Wrong arg type: {type(ocr_engine) = }")
@@ -186,10 +190,10 @@ def is_reasonable(captcha: str) -> bool:
 
 
 def httpx_selectolax_login(
-    client: httpx.Client,
-    *args,
-    max_attempts: int = 3,
-    ocr_engine: None | TrOCREngine = None,
+        client: httpx.Client,
+        *args,
+        max_attempts: int = 3,
+        ocr_engine: None | TrOCREngine = None,
 )-> None:
     config = dotenv_values(".env")
     data = {
@@ -222,10 +226,10 @@ def login_succeeded2(post_response: httpx.Response) -> bool:
 
 
 def download_image(
-    image_url: str,
-    *args,
-    save_to: Path,
-    client: httpx.Client,
+        image_url: str,
+        *args,
+        save_to: Path,
+        client: httpx.Client,
 ) -> None:
     if save_to.is_file():
         return None
@@ -237,7 +241,7 @@ def download_image(
 
 
 def threading_download_photos(
-    client: httpx.Client,
+        client: httpx.Client,
 ) -> None:
     q = queue.Queue()
 
@@ -276,11 +280,11 @@ def slash_join(*args) -> str:
 
 
 def queue_image_urls(
-    q: queue.Queue,
-    *args,
-    client: httpx.Client,
-    # TODO: cache the not-yet-crawled urls
-    #cache: None,
+        q: queue.Queue,
+        *args,
+        client: httpx.Client,
+        # TODO: cache the not-yet-crawled urls
+        #cache: None,
 ) -> None:
     abs_parent_dir = Path(__file__).parent
     abs_download_dir = abs_parent_dir / "images"
@@ -317,14 +321,14 @@ def queue_image_urls(
                     logger.debug(f"put {image_rel_url}")
 
 
-def main():
+def main() -> None:
     logger.setLevel(level=logging.DEBUG)
     with httpx.Client() as client:
         httpx_selectolax_login(client)
         threading_download_photos(client)
 
 
-def main2():
+def main2() -> None:
     logger.setLevel(level=logging.INFO)
 
     print("Stage 1: Log in and collect image urls")
@@ -357,6 +361,81 @@ def main2():
                 )
                 q.task_done()
                 pbar.update()
+
+
+def pick_balanced_captchas(
+        image_dir: Path,
+        *args,
+        symbols: str = default_symbols,
+        num_pick: int = 60_000
+) -> None:
+    """Try best to contain all the symbols in a balanced way"""
+    """
+    In [1]: n = 3004*22
+    
+    In [2]: total = 475_975
+    
+    In [3]: n / total
+    Out[3]: 0.13884762855191973
+    
+    In [4]: n
+    Out[4]: 66088
+
+
+    Purpose:
+    1/ Fill tmpdir up
+    2/ Loop thru image_dir (maybe multiple times)
+    3/ symbol must not repeat
+    """
+    # TODO: Deal with num_pick too many case
+    num_images = sum(1 for _ in image_dir.glob("*.jpg"))
+    if num_pick > num_images:
+        pass
+
+    symbol_set = set(symbols)
+    pbar = tqdm(total=num_pick)
+    import tempfile
+    # Python3.10 hasn't had the delete=False option
+    #with tempfile.TemporaryDirectory(
+    #        prefix="split_",
+    #        dir=Path(__file__).parent,
+    #        delete=False,
+    #) as tmpdir:
+    tmpdir = tempfile.mkdtemp(
+        prefix="split_",
+        dir=Path(__file__).parent,
+    )
+    while True:
+        num_images = sum(1 for _ in image_dir.glob("*.jpg"))
+        if num_images == 0:
+            break
+
+        for p in image_dir.glob("*.jpg"):
+            old_num_symbols = len(symbol_set)
+            if old_num_symbols == 0:
+                symbol_set = set(symbols)
+                continue
+
+            label = get_label(p)
+            label_set = set(label)
+            symbol_set -= label_set
+            new_num_symbols = len(symbol_set)
+            if new_num_symbols == old_num_symbols:
+                continue
+
+            if pbar.n >= num_pick:
+                return
+            new_p = Path(tmpdir) / p.name
+            os.rename(p, new_p)
+            pbar.update()
+
+    # TODO:
+    # 1/ logging.warn is goal not attained
+    # 2/ Report also how many cycles of symbol sets looped thru
+
+
+def get_label(fpath: Path) -> str:
+    return fpath.stem.split("_")[-1]
 
 
 if __name__ == "__main__":

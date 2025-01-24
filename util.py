@@ -405,6 +405,8 @@ def pick_balanced_captchas(
         prefix="split_",
         dir=Path(__file__).parent,
     )
+    num_symbol_cycles = 0
+    num_image_dir_cycles = 0
     while True:
         num_images = sum(1 for _ in image_dir.glob("*.jpg"))
         if num_images == 0:
@@ -414,6 +416,7 @@ def pick_balanced_captchas(
             old_num_symbols = len(symbol_set)
             if old_num_symbols == 0:
                 symbol_set = set(symbols)
+                num_symbol_cycles += 1
                 continue
 
             label = get_label(p)
@@ -424,20 +427,33 @@ def pick_balanced_captchas(
                 continue
 
             if pbar.n >= num_pick:
+                logger.debug(f'{num_image_dir_cycles = }')
+                logger.debug(f'{num_symbol_cycles = }')
                 return
             new_p = Path(tmpdir) / p.name
             os.rename(p, new_p)
             pbar.update()
 
+        num_image_dir_cycles += 1
+
     # TODO:
     # 1/ logging.warn is goal not attained
     # 2/ Report also how many cycles of symbol sets looped thru
+    logger.debug(f'{num_image_dir_cycles = }')
+    logger.debug(f'{num_symbol_cycles = }')
 
 
 def get_label(fpath: Path) -> str:
     return fpath.stem.split("_")[-1]
 
 
+def main3():
+    logger.setLevel(level=logging.DEBUG)
+    image_dir = Path("downloads_x60/")
+    pick_balanced_captchas(image_dir, num_pick=3_000)
+
+
 if __name__ == "__main__":
     #main()
-    main2()
+    #main2()
+    main3()

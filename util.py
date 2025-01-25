@@ -47,13 +47,14 @@ class TrOCREngine:
         return generated_text
 
 
-
 def data_size(num_images: int) -> int:
     image_size_in_KB = 4
     data_size_in_GB = (num_images * image_size_in_KB) // 10**6
     return data_size_in_GB
 
 
+# 0 and o's diff are hardly noticeable.
+# We thus take only small oh, i.e. o.
 default_symbols = string.ascii_lowercase + string.digits[1:]
 
 
@@ -73,7 +74,6 @@ def train_data_size(
 
 def collect_almost_all_train_data(
         *args,
-        # 0 and o's diff are hardly noticeable
         symbols: str = default_symbols,
         captcha_length: int = 6,
         # TODO: make the downloads dir absolute
@@ -89,7 +89,8 @@ def collect_almost_all_train_data(
             captcha_server = random.choice(captcha_servers)
             url = f"{captcha_server}{captcha}"
             response = client.get(url)
-            now = datetime.now().isoformat()
+            #now = datetime.now().isoformat()
+            now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
             file_path = save_dir / f"{now}_{captcha}.jpg"
             with open(file_path, "wb") as f:
                 f.write(response.content)
@@ -98,7 +99,6 @@ def collect_almost_all_train_data(
 def collect_practical_train_data(
         num_images: int = 1_000_000,
         *args,
-        # 0 and o's diff are hardly noticeable
         symbols: str = default_symbols,
         save_dir: str | Path = Path.cwd() / "downloads",
 ) -> None:
@@ -113,11 +113,11 @@ def collect_practical_train_data(
             captcha_server = random.choice(captcha_servers)
             url = f"{captcha_server}{captcha}"
             response = client.get(url)
-            now = datetime.now().isoformat()
+            #now = datetime.now().isoformat()
+            now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
             file_path = save_dir / f"{now}_{captcha}.jpg"
             with open(file_path, "wb") as f:
                 f.write(response.content)
-
 
 
 def collect_practical_train_data2(
@@ -130,10 +130,63 @@ def collect_practical_train_data2(
     pass
 
 
+def collect_repeated_symbol_train_data(
+        num_images: int = 1_000,
+        symbols: str = default_symbols,
+        save_dir: str | Path = Path.cwd() / "downloads",
+) -> None:
+    config = dotenv_values(".env")
+    captcha_servers = [config["PARENT_CAPTCHA_SERVER"],
+                       config["TEACHER_CAPTCHA_SERVER"]]
+    save_dir.mkdir(parents=True, exist_ok=True)
+    pbar = tqdm(total=num_images)
+    with httpx.Client() as client:
+        # All 6 symbol same char
+        for s in symbols:
+            captcha = s * 6
+            captcha_server = random.choice(captcha_servers)
+            url = f"{captcha_server}{captcha}"
+            response = client.get(url)
+            now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+            file_path = save_dir / f"{now}_{captcha}.jpg"
+            with open(file_path, "wb") as f:
+                f.write(response.content)
+            pbar.update()
+            if pbar.n >= pbar.total:
+                return
+
+        # 2 ~ 5 repeated chars
+        while True:
+            i = random.randrange(len(symbols))
+            repeated_char = symbols[i]
+            # m and w are too big to fit in one single CAPTCHA image
+            if repeated_char == "m" or repeated_char == "w":
+                num_repeats = 2
+            else:
+                num_repeats = random.randrange(2, 6)
+            other_char = random.sample(
+                symbols[:i] + symbols[i+1:],
+                k=6-num_repeats,
+            )
+            captcha = other_char
+            captcha.extend(repeated_char * num_repeats)
+            random.shuffle(captcha)
+            captcha = "".join(captcha)
+            captcha_server = random.choice(captcha_servers)
+            url = f"{captcha_server}{captcha}"
+            response = client.get(url)
+            now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+            file_path = save_dir / f"{now}_{captcha}.jpg"
+            with open(file_path, "wb") as f:
+                f.write(response.content)
+            pbar.update()
+            if pbar.n >= pbar.total:
+                return
+
+
 def crazy_infinite_practical_captcha_download(
         num_images: int = 1_000_000,
         *args,
-        # 0 and o's diff are hardly noticeable
         symbols: str = default_symbols,
         save_dir: str | Path = Path.cwd() / "downloads",
 ) -> None:
@@ -395,16 +448,19 @@ def pick_balanced_captchas(
     symbol_set = set(symbols)
     pbar = tqdm(total=num_pick)
     import tempfile
+
     # Python3.10 hasn't had the delete=False option
     #with tempfile.TemporaryDirectory(
     #        prefix="split_",
     #        dir=Path(__file__).parent,
     #        delete=False,
     #) as tmpdir:
-    tmpdir = tempfile.mkdtemp(
+
+    # tempfile.mkdtemp returns a str
+    tmpdir = Path(tempfile.mkdtemp(
         prefix="split_",
         dir=Path(__file__).parent,
-    )
+    ))
     num_symbol_cycles = 0
     num_image_dir_cycles = 0
     while True:
@@ -429,8 +485,9 @@ def pick_balanced_captchas(
             if pbar.n >= num_pick:
                 logger.debug(f'{num_image_dir_cycles = }')
                 logger.debug(f'{num_symbol_cycles = }')
+                print(f'{num_pick} images moved into {tmpdir}')
                 return
-            new_p = Path(tmpdir) / p.name
+            new_p = tmpdir / p.name
             os.rename(p, new_p)
             pbar.update()
 
@@ -441,6 +498,7 @@ def pick_balanced_captchas(
     # 2/ Report also how many cycles of symbol sets looped thru
     logger.debug(f'{num_image_dir_cycles = }')
     logger.debug(f'{num_symbol_cycles = }')
+    print(f'{num_pick} images moved into {tmpdir}')
 
 
 def get_label(fpath: Path) -> str:

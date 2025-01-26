@@ -511,6 +511,15 @@ def main3():
     pick_balanced_captchas(image_dir, num_pick=3_000)
 
 
+def remove_subsecond_isoformat(s: str) -> str:
+    splits = s.split('.')
+    if len(splits) != 3:
+        new_s = s
+    else:
+        new_s = f'{splits[0]}_{"_".join(splits[1].split("_")[1:])}.{splits[2]}'
+    return new_s
+
+
 if __name__ == "__main__":
     #main()
     #main2()

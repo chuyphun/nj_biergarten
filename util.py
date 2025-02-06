@@ -227,7 +227,7 @@ def crack_captcha(
         *args,
         ocr_engine: TrOCREngine | None = None,
 ) -> str:
-    if not isinstance(ocr_engine, (TrOCREngine, None)):
+    if ocr_engine is not None and not isinstance(ocr_engine, TrOCREngine):
         raise TypeError(f"Wrong arg type: {type(ocr_engine) = }")
 
     config = dotenv_values(".env")
@@ -398,9 +398,8 @@ def main2() -> None:
 
     print("Stage 1: Log in and collect image urls")
     with httpx.Client() as client:
-        ocr_engine = TrOCREngine(
-            model_dir=Path.home() / "git-repos/gitlab/phunc20/captchew/checkpoint-1100-fp16-numBeams4-penalty1-ngram0/"
-        )
+        #ocr_engine = TrOCREngine()
+        ocr_engine = None
         httpx_selectolax_login(client, ocr_engine=ocr_engine)
         q = queue.Queue()
         queue_image_urls(q, client=client)
@@ -534,5 +533,5 @@ def remove_subsecond_isoformat(s: str) -> str:
 
 if __name__ == "__main__":
     #main()
-    #main2()
-    main3()
+    main2()
+    #main3()

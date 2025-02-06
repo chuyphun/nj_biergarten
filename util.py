@@ -40,8 +40,13 @@ class TrOCREngine:
             processor_dir: str = MY_CAPTCHA_HUB_REPO,
             model_dir: str = MY_CAPTCHA_HUB_REPO,
     ) -> None:
-        self.processor = TrOCRProcessor.from_pretrained(processor_dir)
-        self.model = VisionEncoderDecoderModel.from_pretrained(model_dir)
+        self.processor_dir = processor_dir
+        self.model_dir = model_dir
+        self.processor = TrOCRProcessor.from_pretrained(self.processor_dir)
+        self.model = VisionEncoderDecoderModel.from_pretrained(self.model_dir)
+
+    def __repr__(self) -> str:
+        return f'TrOCREngine(processor_dir="{self.processor_dir}", model_dir="{self.model_dir}")'
 
     def crack_captcha(self, image: Image | torch.Tensor | np.ndarray) -> str:
         pixel_values = self.processor(image, return_tensors='pt').pixel_values
@@ -263,6 +268,7 @@ def httpx_selectolax_login(
             ocr_engine=ocr_engine,
         )
         if not is_reasonable(guess):
+            logger.debug(f'Unreasonable: {guess = }')
             continue
         data["chk"] = guess
         post_response = client.post(config["POST_URL"], data=data)
@@ -270,7 +276,10 @@ def httpx_selectolax_login(
             return
 
     # TODO: Login failed. Raise exception?
-    #raise
+    print("Login failed.")
+    print(f'Consider raising {max_attempts = }')
+    print(f'Or change to a different {ocr_engine = }')
+    exit()
 
 
 def login_succeeded(post_response: httpx.Response) -> bool:

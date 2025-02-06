@@ -11,6 +11,8 @@ import ipdb
 import string
 import asyncio
 import aiofiles
+import torch
+import numpy as np
 from enum import auto, unique, Enum
 from pathlib import Path
 from math import prod
@@ -29,18 +31,19 @@ logger = logging.getLogger("nj_biergarten")
 logging.basicConfig()
 
 
+MY_CAPTCHA_HUB_REPO =  "phunc20/trocr-base-handwritten_nj_biergarten_captcha_v2"
+
 class TrOCREngine:
     def __init__(
             self,
             *args,
-            processor_dir: str = "microsoft/trocr-base-handwritten",
-            model_dir: str = "microsoft/trocr-base-stage1",
+            processor_dir: str = MY_CAPTCHA_HUB_REPO,
+            model_dir: str = MY_CAPTCHA_HUB_REPO,
     ) -> None:
         self.processor = TrOCRProcessor.from_pretrained(processor_dir)
         self.model = VisionEncoderDecoderModel.from_pretrained(model_dir)
 
-
-    def crack_captcha(self, image: Image) -> str:
+    def crack_captcha(self, image: Image | torch.Tensor | np.ndarray) -> str:
         pixel_values = self.processor(image, return_tensors='pt').pixel_values
         generated_ids = self.model.generate(pixel_values)
         generated_text = self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
